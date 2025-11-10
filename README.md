@@ -23,14 +23,17 @@ Responsabilities:
 - Create message components and chat layout.
 - Handle user input, message sending, and display of received messages.
 - Style the application .
+  
 *Atitienei Eliza*:
 Develop the Express server and WebSocket logic with Socket.IO.
 - Define API endpoints for users, chat history, and authentication.
 - Design and manage the MongoDB schema (messages, users).
 - Handle connection between frontend and database.
+- 
 *Bobeica Veaceslav*
-Integrate frontend and backend.
+-Integrate frontend and backend.
 - Test real-time message flow between multiple clients.
 - Debug WebSocket communication issues.
+- Prepare the environment for the next stage (React Native).
 - Write documentation for the setup and API usage.
 - Prepare the environment for the next stage (React Native). 
