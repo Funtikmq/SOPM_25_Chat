@@ -17,6 +17,7 @@ Atitienei Eliza
 -The main goal is to provide hands-on experience with frontend frameworks (React & React Native) and backend technologies (Node.js + Express) while using MongoDB for message storage and WebSockets for real-time communication.
 
 Responsabilities:
+
 *Andrieș Bogdan*: 
 - Build the user interface using React.
 - Implement real-time communication using socket.io-client.
@@ -25,13 +26,13 @@ Responsabilities:
 - Style the application .
   
 *Atitienei Eliza*:
-Develop the Express server and WebSocket logic with Socket.IO.
+-Develop the Express server and WebSocket logic with Socket.IO.
 - Define API endpoints for users, chat history, and authentication.
 - Design and manage the MongoDB schema (messages, users).
 - Handle connection between frontend and database.
-- 
+
 *Bobeica Veaceslav*
--Integrate frontend and backend.
+- Integrate frontend and backend.
 - Test real-time message flow between multiple clients.
 - Debug WebSocket communication issues.
 - Prepare the environment for the next stage (React Native).
