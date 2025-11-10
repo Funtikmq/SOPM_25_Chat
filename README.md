@@ -26,7 +26,7 @@ Responsabilities:
 - Style the application .
   
 *Atitienei Eliza*:
--Develop the Express server and WebSocket logic with Socket.IO.
+- Develop the Express server and WebSocket logic with Socket.IO.
 - Define API endpoints for users, chat history, and authentication.
 - Design and manage the MongoDB schema (messages, users).
 - Handle connection between frontend and database.
