@@ -13,7 +13,7 @@ export default function ChatApp() {
 
   useEffect(() => {
     if (hasUsername) {
-      ws.current = new WebSocket(`ws://${serverIP}`);
+      ws.current = new WebSocket("wss://sopm-25-chat.onrender.com");
 
       ws.current.onopen = () => setIsConnected(true);
       ws.current.onmessage = (event) => {
