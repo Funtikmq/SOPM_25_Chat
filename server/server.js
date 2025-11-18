@@ -1,31 +1,32 @@
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
-const cors = require("cors");
 const path = require("path");
 
 const app = express();
-app.use(cors());
-
-// Servește fișierele static buildate de Vite
-app.use(express.static(path.join(__dirname, "../client/dist")));
-
-// ✅ CORECT - folosește "/*" în loc de "*"
-app.get("/*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
-});
-
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Stocare clienți conectați
+// Servește fișierele static buildate
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+// Ruta pentru SPA - folosește approach-ul safe
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+});
+
+// Pentru orice altă rută, redirecționează către index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+});
+
+// WebSocket logic
 const clients = new Set();
 
 wss.on("connection", (ws) => {
   console.log("Client nou conectat");
   clients.add(ws);
 
-  // Trimite mesaj de bun venit
   ws.send(
     JSON.stringify({
       type: "system",
@@ -34,13 +35,10 @@ wss.on("connection", (ws) => {
     })
   );
 
-  // Ascultă mesaje de la client
   ws.on("message", (data) => {
     try {
       const message = JSON.parse(data);
-      console.log("Mesaj primit:", message);
 
-      // Broadcast mesajul către toți clienții conectați
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(
@@ -58,23 +56,9 @@ wss.on("connection", (ws) => {
     }
   });
 
-  // Gestionare deconectare
   ws.on("close", () => {
     console.log("Client deconectat");
     clients.delete(ws);
-
-    // Anunță ceilalți utilizatori
-    clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(
-          JSON.stringify({
-            type: "system",
-            message: "Un utilizator s-a deconectat",
-            timestamp: new Date().toISOString(),
-          })
-        );
-      }
-    });
   });
 
   ws.on("error", (error) => {
@@ -85,5 +69,4 @@ wss.on("connection", (ws) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server pornit pe portul ${PORT}`);
-  console.log(`📱 Aplicația este accesibilă la: http://localhost:${PORT}`);
 });
