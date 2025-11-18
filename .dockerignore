@@ -1,0 +1,10 @@
+node_modules
+.git
+.gitignore
+README.md
+.dockerignore
+client/node_modules
+server/node_modules
+client/dist
+.DS_Store
+*.log

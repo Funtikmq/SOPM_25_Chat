@@ -1,11 +1,19 @@
-// server.js
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 app.use(cors());
+
+// Servește fișierele static buildate din client
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+// Pentru SPA - toate rutele să ducă la index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+});
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -77,18 +85,4 @@ wss.on("connection", (ws) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server pornit pe portul ${PORT}`);
-  console.log(`Accesibil la: ws://localhost:${PORT}`);
-
-  // Afișează IP-ul local pentru acces din rețea
-  const os = require("os");
-  const networkInterfaces = os.networkInterfaces();
-  Object.keys(networkInterfaces).forEach((interfaceName) => {
-    networkInterfaces[interfaceName].forEach((interface) => {
-      if (interface.family === "IPv4" && !interface.internal) {
-        console.log(
-          `Accesibil din rețea la: ws://${interface.address}:${PORT}`
-        );
-      }
-    });
-  });
 });
