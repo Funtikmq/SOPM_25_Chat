@@ -7,11 +7,11 @@ const path = require("path");
 const app = express();
 app.use(cors());
 
-// Servește fișierele static buildate din client
+// Servește fișierele static buildate de Vite
 app.use(express.static(path.join(__dirname, "../client/dist")));
 
-// Pentru SPA - toate rutele să ducă la index.html
-app.get("*", (req, res) => {
+// ✅ CORECT - folosește "/*" în loc de "*"
+app.get("/*", (req, res) => {
   res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
@@ -84,5 +84,6 @@ wss.on("connection", (ws) => {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server pornit pe portul ${PORT}`);
+  console.log(`🚀 Server pornit pe portul ${PORT}`);
+  console.log(`📱 Aplicația este accesibilă la: http://localhost:${PORT}`);
 });
