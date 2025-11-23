@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import { User, Wifi, WifiOff, LogOut } from "lucide-react";
+import Avatar from "./avatar";
+import { Wifi, WifiOff, LogOut } from "lucide-react";
 
 export default function ChatWindow({ username }) {
   const [messages, setMessages] = useState([]);
@@ -40,10 +41,9 @@ export default function ChatWindow({ username }) {
   return (
     <div className="chat-page">
       <div className="chat-card">
-
         <header className="chat-header">
           <div className="chat-header-left">
-            <User />
+            <Avatar username={username} size={44} />
             <h1>Chat Room</h1>
             <div className="chat-status">
               {isConnected ? <Wifi /> : <WifiOff />}
