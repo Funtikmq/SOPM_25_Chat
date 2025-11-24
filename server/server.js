@@ -111,7 +111,7 @@ wss.on("connection", async (ws) => {
             JSON.stringify({
               type: "message",
               username: newMessage.username,
-              message: newMessage.content,
+               message: newMessage.content,
               timestamp: newMessage.timestamp,
             })
           );
