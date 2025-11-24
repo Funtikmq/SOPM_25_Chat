@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import Avatar from "./avatar";
+import Avatar from "./Avatar";
 import { Wifi, WifiOff, LogOut } from "lucide-react";
 
 export default function ChatWindow({ username }) {

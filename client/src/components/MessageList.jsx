@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import Avatar from "./avatar";
+import Avatar from "./Avatar";
 
 export default function MessageList({ messages, username }) {
   const endRef = useRef();
@@ -29,8 +29,9 @@ export default function MessageList({ messages, username }) {
                 display: "flex",
                 gap: "10px",
                 alignItems: "flex-start",
-                flexDirection: msg.username === username ? "row-reverse" : "row",
-                maxWidth: "70%"
+                flexDirection:
+                  msg.username === username ? "row-reverse" : "row",
+                maxWidth: "70%",
               }}
             >
               <Avatar username={msg.username} size={36} />

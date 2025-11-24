@@ -88,6 +88,7 @@ wss.on("connection", async (ws) => {
     try {
       const msg = JSON.parse(data);
 
+      // Găsește sau creează userul
       let user = await User.findOne({ username: msg.username });
       if (!user) {
         user = await User.create({
@@ -96,18 +97,21 @@ wss.on("connection", async (ws) => {
         });
       }
 
+      // Creează mesajul respectând schema
       const newMessage = await Message.create({
+        content: msg.message,
+        userId: user._id,
         username: msg.username,
-        message: msg.message,
       });
 
+      // Trimite mesajul către toți clienții
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(
             JSON.stringify({
               type: "message",
               username: newMessage.username,
-              message: newMessage.message,
+              message: newMessage.content,
               timestamp: newMessage.timestamp,
             })
           );
