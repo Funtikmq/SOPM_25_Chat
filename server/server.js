@@ -1,10 +1,10 @@
-require('dotenv').config();
+require("dotenv").config();
 
-console.log('Verificare variabile mediu:');
-console.log('MONGODB_URI:', process.env.MONGODB_URI ? '✓ Setat' : '✗ Lipsă');
-console.log('PORT:', process.env.PORT);
+const crypto = require("crypto");
 
-
+console.log("Verificare variabile mediu:");
+console.log("MONGODB_URI:", process.env.MONGODB_URI ? "✓ Setat" : "✗ Lipsă");
+console.log("PORT:", process.env.PORT);
 
 const express = require("express");
 const http = require("http");
@@ -34,7 +34,12 @@ app.post("/login", async (req, res) => {
 
   try {
     let user = await User.findOne({ username });
-    if (!user) user = await User.create({ username });
+    if (!user) {
+      user = await User.create({
+        username,
+        sessionId: crypto.randomUUID(),
+      });
+    }
 
     res.json({ success: true, username: user.username });
   } catch (err) {
@@ -59,26 +64,37 @@ wss.on("connection", async (ws) => {
   console.log("Client conectat");
   clients.add(ws);
 
-  ws.send(JSON.stringify({
-    type: "system",
-    message: "Conectat la server!",
-    timestamp: new Date().toISOString(),
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "system",
+      message: "Conectat la server!",
+      timestamp: new Date().toISOString(),
+    })
+  );
 
   const oldMessages = await Message.find().sort({ timestamp: 1 }).limit(50);
-  oldMessages.forEach((m) => ws.send(JSON.stringify({
-    type: "message",
-    username: m.username,
-    message: m.message,
-    timestamp: m.timestamp,
-  })));
+  oldMessages.forEach((m) =>
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        username: m.username,
+        message: m.message,
+        timestamp: m.timestamp,
+      })
+    )
+  );
 
   ws.on("message", async (data) => {
     try {
       const msg = JSON.parse(data);
 
       let user = await User.findOne({ username: msg.username });
-      if (!user) user = await User.create({ username: msg.username });
+      if (!user) {
+        user = await User.create({
+          username: msg.username,
+          sessionId: crypto.randomUUID(),
+        });
+      }
 
       const newMessage = await Message.create({
         username: msg.username,
@@ -87,12 +103,14 @@ wss.on("connection", async (ws) => {
 
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: "message",
-            username: newMessage.username,
-            message: newMessage.message,
-            timestamp: newMessage.timestamp,
-          }));
+          client.send(
+            JSON.stringify({
+              type: "message",
+              username: newMessage.username,
+              message: newMessage.message,
+              timestamp: newMessage.timestamp,
+            })
+          );
         }
       });
     } catch (err) {
@@ -109,11 +127,9 @@ wss.on("connection", async (ws) => {
 });
 
 const PORT = process.env.PORT || 3001;
-   server.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", () => {
   //temporar:
   // server.listen(PORT, "localhost", () => {
-    
+
   console.log(`🚀 Server pornit pe portul ${PORT}`);
 });
-
-
