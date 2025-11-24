@@ -11,6 +11,8 @@ export default function ChatWindow({ username }) {
 
   useEffect(() => {
     ws.current = new WebSocket("wss://sopm-25-chat.onrender.com");
+    //temporar:
+    //ws.current = new WebSocket("ws://localhost:3001");
 
     ws.current.onopen = () => setIsConnected(true);
     ws.current.onclose = () => setIsConnected(false);

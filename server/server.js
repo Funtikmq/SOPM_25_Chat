@@ -1,4 +1,11 @@
-require("dotenv").config();
+require('dotenv').config();
+
+console.log('Verificare variabile mediu:');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? '✓ Setat' : '✗ Lipsă');
+console.log('PORT:', process.env.PORT);
+
+
+
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
@@ -12,21 +19,18 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Conectare DB
+// Conectare la MongoDB
 connectDB();
 
 // Ca să putem citi JSON în POST
 app.use(express.json());
 
 // ======================
-// RUTA LOGIN (o singură dată)
+// RUTA LOGIN
 // ======================
 app.post("/login", async (req, res) => {
   const { username } = req.body;
-
-  if (!username) {
-    return res.json({ success: false, message: "Username lipsă" });
-  }
+  if (!username) return res.json({ success: false, message: "Username lipsă" });
 
   try {
     let user = await User.findOne({ username });
@@ -55,25 +59,19 @@ wss.on("connection", async (ws) => {
   console.log("Client conectat");
   clients.add(ws);
 
-  ws.send(
-    JSON.stringify({
-      type: "system",
-      message: "Conectat la server!",
-      timestamp: new Date().toISOString(),
-    })
-  );
+  ws.send(JSON.stringify({
+    type: "system",
+    message: "Conectat la server!",
+    timestamp: new Date().toISOString(),
+  }));
 
   const oldMessages = await Message.find().sort({ timestamp: 1 }).limit(50);
-  oldMessages.forEach((m) =>
-    ws.send(
-      JSON.stringify({
-        type: "message",
-        username: m.username,
-        message: m.message,
-        timestamp: m.timestamp,
-      })
-    )
-  );
+  oldMessages.forEach((m) => ws.send(JSON.stringify({
+    type: "message",
+    username: m.username,
+    message: m.message,
+    timestamp: m.timestamp,
+  })));
 
   ws.on("message", async (data) => {
     try {
@@ -89,14 +87,12 @@ wss.on("connection", async (ws) => {
 
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(
-            JSON.stringify({
-              type: "message",
-              username: newMessage.username,
-              message: newMessage.message,
-              timestamp: newMessage.timestamp,
-            })
-          );
+          client.send(JSON.stringify({
+            type: "message",
+            username: newMessage.username,
+            message: newMessage.message,
+            timestamp: newMessage.timestamp,
+          }));
         }
       });
     } catch (err) {
@@ -108,9 +104,16 @@ wss.on("connection", async (ws) => {
     console.log("Client deconectat");
     clients.delete(ws);
   });
+
+  ws.on("error", (err) => console.error("Eroare WebSocket:", err));
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, "0.0.0.0", () => {
+// server.listen(PORT, "0.0.0.0", () => {
+  //temporar:
+  server.listen(PORT, "localhost", () => {
+    
   console.log(`🚀 Server pornit pe portul ${PORT}`);
 });
+
+
