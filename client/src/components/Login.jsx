@@ -4,6 +4,24 @@ import { User } from "lucide-react";
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
 
+  const handleLogin = async () => {
+    if (!username.trim()) return;
+
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      onLogin(data.username); // trimitem username-ul valid către App
+    } else {
+      alert("Eroare la login");
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-card">
@@ -21,10 +39,10 @@ export default function Login({ onLogin }) {
           placeholder="Introdu numele..."
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && onLogin(username)}
+          onKeyPress={(e) => e.key === "Enter" && handleLogin()}
         />
 
-        <button className="login-button" onClick={() => onLogin(username)}>
+        <button className="login-button" onClick={handleLogin}>
           Intră în chat
         </button>
       </div>

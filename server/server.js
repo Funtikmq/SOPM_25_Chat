@@ -1,30 +1,58 @@
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const path = require("path");
 
+const connectDB = require("./database/connect");
+const Message = require("./models/Message");
+const User = require("./models/User");
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Servește fișierele static buildate
-app.use(express.static(path.join(__dirname, "../client/dist")));
+// Conectare DB
+connectDB();
 
-// Ruta pentru SPA - folosește approach-ul safe
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+// Ca să putem citi JSON în POST
+app.use(express.json());
+
+// ======================
+// RUTA LOGIN (o singură dată)
+// ======================
+app.post("/login", async (req, res) => {
+  const { username } = req.body;
+
+  if (!username) {
+    return res.json({ success: false, message: "Username lipsă" });
+  }
+
+  try {
+    let user = await User.findOne({ username });
+    if (!user) user = await User.create({ username });
+
+    res.json({ success: true, username: user.username });
+  } catch (err) {
+    console.error("Eroare login:", err);
+    res.json({ success: false, message: "Eroare server" });
+  }
 });
 
-// Pentru orice altă rută, redirecționează către index.html
+// Servește frontend-ul
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
-// WebSocket logic
+// ======================
+// WebSocket
+// ======================
 const clients = new Set();
 
-wss.on("connection", (ws) => {
-  console.log("Client nou conectat");
+wss.on("connection", async (ws) => {
+  console.log("Client conectat");
   clients.add(ws);
 
   ws.send(
@@ -35,34 +63,50 @@ wss.on("connection", (ws) => {
     })
   );
 
-  ws.on("message", (data) => {
+  const oldMessages = await Message.find().sort({ timestamp: 1 }).limit(50);
+  oldMessages.forEach((m) =>
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        username: m.username,
+        message: m.message,
+        timestamp: m.timestamp,
+      })
+    )
+  );
+
+  ws.on("message", async (data) => {
     try {
-      const message = JSON.parse(data);
+      const msg = JSON.parse(data);
+
+      let user = await User.findOne({ username: msg.username });
+      if (!user) user = await User.create({ username: msg.username });
+
+      const newMessage = await Message.create({
+        username: msg.username,
+        message: msg.message,
+      });
 
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(
             JSON.stringify({
               type: "message",
-              username: message.username || "Anonim",
-              message: message.message,
-              timestamp: new Date().toISOString(),
+              username: newMessage.username,
+              message: newMessage.message,
+              timestamp: newMessage.timestamp,
             })
           );
         }
       });
-    } catch (error) {
-      console.error("Eroare parsare mesaj:", error);
+    } catch (err) {
+      console.error("Eroare mesaj:", err);
     }
   });
 
   ws.on("close", () => {
     console.log("Client deconectat");
     clients.delete(ws);
-  });
-
-  ws.on("error", (error) => {
-    console.error("Eroare WebSocket:", error);
   });
 });
 
