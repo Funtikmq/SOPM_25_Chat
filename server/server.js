@@ -109,9 +109,9 @@ wss.on("connection", async (ws) => {
 });
 
 const PORT = process.env.PORT || 3001;
-// server.listen(PORT, "0.0.0.0", () => {
+   server.listen(PORT, "0.0.0.0", () => {
   //temporar:
-  server.listen(PORT, "localhost", () => {
+  // server.listen(PORT, "localhost", () => {
     
   console.log(`🚀 Server pornit pe portul ${PORT}`);
 });
