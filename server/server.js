@@ -78,7 +78,7 @@ wss.on("connection", async (ws) => {
       JSON.stringify({
         type: "message",
         username: m.username,
-        message: m.message,
+        message: m.content,
         timestamp: m.timestamp,
       })
     )
