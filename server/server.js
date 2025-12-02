@@ -22,7 +22,6 @@ const wss = new WebSocket.Server({ server });
 // Conectare la MongoDB
 connectDB();
 
-// Ca să putem citi JSON în POST
 app.use(express.json());
 
 // ======================
@@ -111,7 +110,7 @@ wss.on("connection", async (ws) => {
             JSON.stringify({
               type: "message",
               username: newMessage.username,
-               message: newMessage.content,
+              message: newMessage.content,
               timestamp: newMessage.timestamp,
             })
           );
