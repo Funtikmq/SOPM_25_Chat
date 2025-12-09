@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import Avatar from "./Avatar";
 
-export default function MessageList({ messages, username }) {
+export default function MessageList({ messages, username, onDelete }) {
   const scrollRef = useRef();
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function MessageList({ messages, username }) {
     >
       {messages.map((msg, i) => (
         <View
-          key={i}
+          key={msg.id || msg._id || i}
           style={[
             styles.messageWrapper,
             msg.type === "system"
@@ -32,6 +32,8 @@ export default function MessageList({ messages, username }) {
             <View style={styles.systemMessage}>
               <Text style={styles.systemText}>{msg.message}</Text>
             </View>
+          ) : msg.deleted ? (
+            <View style={styles.systemMessage}><Text style={styles.systemText}>Deleted Message</Text></View>
           ) : (
             <View
               style={[
@@ -57,6 +59,11 @@ export default function MessageList({ messages, username }) {
                   })}
                 </Text>
               </View>
+              {msg.username === username && onDelete && (
+                <TouchableOpacity onPress={() => onDelete(msg.id || msg._id)} style={{marginLeft:8}}>
+                  <Text style={{color:'#9ca3af'}}>✖</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>

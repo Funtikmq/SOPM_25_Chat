@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import Avatar from "./Avatar";
 
-export default function MessageList({ messages, username }) {
+export default function MessageList({ messages, username, onDelete }) {
   const endRef = useRef();
 
   useEffect(() => {
@@ -12,7 +12,7 @@ export default function MessageList({ messages, username }) {
     <main className="chat-messages">
       {messages.map((msg, i) => (
         <div
-          key={i}
+          key={msg.id || msg._id || i}
           className={`message-wrapper ${
             msg.type === "system"
               ? "center"
@@ -23,6 +23,10 @@ export default function MessageList({ messages, username }) {
         >
           {msg.type === "system" ? (
             <div className="system-message">{msg.message}</div>
+          ) : msg.deleted ? (
+            <div style={{ maxWidth: "70%" }}>
+              <div className="system-message">Deleted Message</div>
+            </div>
           ) : (
             <div
               style={{
@@ -35,19 +39,38 @@ export default function MessageList({ messages, username }) {
               }}
             >
               <Avatar username={msg.username} size={36} />
-              <div
-                className={`chat-message ${
-                  msg.username === username ? "mine" : "theirs"
-                }`}
-              >
-                <div className="message-username">{msg.username}</div>
-                <div className="message-text">{msg.message}</div>
-                <div className="message-time">
-                  {new Date(msg.timestamp).toLocaleTimeString("ro-RO", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+              <div style={{ position: "relative" }}>
+                <div
+                  className={`chat-message ${
+                    msg.username === username ? "mine" : "theirs"
+                  }`}
+                >
+                  <div className="message-username">{msg.username}</div>
+                  <div className="message-text">{msg.message}</div>
+                  <div className="message-time">
+                    {new Date(msg.timestamp).toLocaleTimeString("ro-RO", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
                 </div>
+                {msg.username === username && onDelete && (
+                  <button
+                    onClick={() => onDelete(msg.id || msg._id)}
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -36,
+                      background: "transparent",
+                      border: "none",
+                      color: "#9ca3af",
+                      cursor: "pointer",
+                    }}
+                    title="Șterge mesaj"
+                  >
+                    ✖
+                  </button>
+                )}
               </div>
             </div>
           )}

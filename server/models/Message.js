@@ -14,6 +14,18 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: String,
+    default: null
+  },
   timestamp: {
     type: Date,
     default: Date.now

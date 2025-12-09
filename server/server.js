@@ -76,9 +76,11 @@ wss.on("connection", async (ws) => {
     ws.send(
       JSON.stringify({
         type: "message",
+        id: m._id,
         username: m.username,
         message: m.content,
         timestamp: m.timestamp,
+        deleted: !!m.deleted,
       })
     )
   );
@@ -97,26 +99,54 @@ wss.on("connection", async (ws) => {
         });
       }
 
-      // Gestionare CLEAR event
+      // CLEAR events are client-local only. Ignore clear requests on server to avoid
+      // clearing the view for all connected clients.
       if (msg.type === "clear") {
-        console.log("Clear event received from:", msg.username);
-        user.lastClearAt = new Date();
-        await user.save();
-        console.log("User lastClearAt updated to:", user.lastClearAt);
-        
-        // Notifică toți clienții despre clear
-        console.log("Broadcasting clear event to", clients.size, "clients");
-        clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(
-              JSON.stringify({
-                type: "clear",
-                username: msg.username,
-                timestamp: user.lastClearAt.toISOString(),
-              })
-            );
+        console.log("Received clear request from", msg.username, "— ignoring on server (local-only clear)");
+        return;
+      }
+
+      // Handle delete request
+      if (msg.type === "delete") {
+        try {
+          const messageId = msg.id;
+          if (!messageId) {
+            ws.send(JSON.stringify({ type: "error", message: "Missing message id for delete" }));
+            return;
           }
-        });
+          const m = await Message.findById(messageId);
+          if (!m) {
+            ws.send(JSON.stringify({ type: "error", message: "Message not found" }));
+            return;
+          }
+          // Allow delete only by original author
+          if (m.username !== msg.username) {
+            ws.send(JSON.stringify({ type: "error", message: "Nu ai dreptul sa stergi acest mesaj" }));
+            return;
+          }
+
+          m.deleted = true;
+          m.deletedAt = new Date();
+          m.deletedBy = msg.username;
+          await m.save();
+
+          // Broadcast delete event to all clients
+          const payload = {
+            type: "delete",
+            id: m._id,
+            deletedBy: m.deletedBy,
+            deletedAt: m.deletedAt.toISOString(),
+          };
+          console.log("Broadcasting delete:", payload);
+          clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify(payload));
+            }
+          });
+        } catch (err) {
+          console.error("Error handling delete:", err);
+          ws.send(JSON.stringify({ type: "error", message: "Eroare stergere mesaj" }));
+        }
         return;
       }
 
@@ -131,9 +161,11 @@ wss.on("connection", async (ws) => {
       // Prepare payload and log for debugging
       const payload = {
         type: "message",
+        id: newMessage._id,
         username: newMessage.username,
         message: newMessage.content,
         timestamp: newMessage.timestamp.toISOString(),
+        deleted: false,
       };
       console.log("Broadcasting message:", payload);
 

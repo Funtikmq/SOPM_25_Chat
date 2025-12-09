@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert, AsyncStorage } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import Avatar from "./Avatar";
@@ -61,6 +62,21 @@ export default function ChatWindow({ username, onLogout }) {
         return;
       }
 
+      // Handle delete event
+      if (data && data.type === "delete") {
+        console.log("Delete event received:", data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            const mid = m.id || m._id;
+            if (String(mid) === String(data.id)) {
+              return { ...m, deleted: true, deletedBy: data.deletedBy, deletedAt: data.deletedAt };
+            }
+            return m;
+          })
+        );
+        return;
+      }
+
       // Mesaje normale - defensive timestamp
       if (data) {
         if (!data.timestamp) {
@@ -104,14 +120,16 @@ export default function ChatWindow({ username, onLogout }) {
       {
         text: "Curăță",
         style: "destructive",
-        onPress: () => {
-          console.log("Sending clear event...");
-          ws.current?.send(
-            JSON.stringify({
-              username,
-              type: "clear",
-            })
-          );
+        onPress: async () => {
+          const ts = new Date();
+          console.log("Clearing chat locally at", ts.toISOString());
+          setLastClearAt(ts);
+          try {
+            await AsyncStorage.setItem("lastClearAt", ts.toISOString());
+            console.log("lastClearAt saved to AsyncStorage:", ts.toISOString());
+          } catch (err) {
+            console.error("Error saving lastClearAt:", err);
+          }
         },
       },
     ]);

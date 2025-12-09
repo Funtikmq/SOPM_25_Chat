@@ -49,6 +49,21 @@ export default function ChatWindow({ username }) {
         return;
       }
 
+      // Gestionare delete event
+      if (data && data.type === "delete") {
+        console.log("Delete event received:", data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            const mid = m.id || m._id;
+            if (String(mid) === String(data.id)) {
+              return { ...m, deleted: true, deletedBy: data.deletedBy, deletedAt: data.deletedAt };
+            }
+            return m;
+          })
+        );
+        return;
+      }
+
       // Mesaje normale - defensive: ensure timestamp exists
       if (data) {
         if (!data.timestamp) {
@@ -72,6 +87,11 @@ export default function ChatWindow({ username }) {
     );
   };
 
+  const deleteMessage = (id) => {
+    if (!confirm("Sigur vrei să ștergi acest mesaj?")) return;
+    ws.current?.send(JSON.stringify({ type: "delete", id, username }));
+  };
+
   const logout = () => {
     ws.current?.close();
     window.location.reload();
@@ -81,16 +101,18 @@ export default function ChatWindow({ username }) {
     if (!confirm("Ștergi afișarea chat-ului? (mesajele rămân în baza de date)")) {
       return;
     }
-    console.log("Sending clear event...");
-    ws.current?.send(
-      JSON.stringify({
-        username,
-        type: "clear",
-      })
-    );
+    const ts = new Date();
+    console.log("Clearing chat locally at", ts.toISOString());
+    setLastClearAt(ts);
+    try {
+      localStorage.setItem("lastClearAt", ts.toISOString());
+    } catch (e) {
+      console.warn("Could not save lastClearAt to localStorage:", e);
+    }
   };
 
-  // Filtrează mesajele să afișeze doar pe cele primite după clear
+  // Filtrează mesajele să afișeze doar pe cele primite după clear (nu ascundem mesajele șterse,
+  // server emite evenimentul `delete` și MessageList afișează placeholderul)
   const visibleMessages = messages.filter((m) => {
     if (m.type === "clear") return false;
     if (!m.timestamp) return true;
@@ -127,7 +149,7 @@ export default function ChatWindow({ username }) {
           </div>
         </header>
 
-        <MessageList messages={visibleMessages} username={username} />
+        <MessageList messages={visibleMessages} username={username} onDelete={deleteMessage} />
         <MessageInput onSend={sendMessage} disabled={!isConnected} />
       </div>
     </div>
