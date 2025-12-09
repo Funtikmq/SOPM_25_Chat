@@ -85,6 +85,7 @@ wss.on("connection", async (ws) => {
 
   ws.on("message", async (data) => {
     try {
+      console.log("Raw WS message incoming (raw):", data);
       const msg = JSON.parse(data);
 
       // Găsește sau creează userul
@@ -96,6 +97,30 @@ wss.on("connection", async (ws) => {
         });
       }
 
+      // Gestionare CLEAR event
+      if (msg.type === "clear") {
+        console.log("Clear event received from:", msg.username);
+        user.lastClearAt = new Date();
+        await user.save();
+        console.log("User lastClearAt updated to:", user.lastClearAt);
+        
+        // Notifică toți clienții despre clear
+        console.log("Broadcasting clear event to", clients.size, "clients");
+        clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(
+              JSON.stringify({
+                type: "clear",
+                username: msg.username,
+                timestamp: user.lastClearAt.toISOString(),
+              })
+            );
+          }
+        });
+        return;
+      }
+
+      // Mesaj normal
       // Creează mesajul respectând schema
       const newMessage = await Message.create({
         content: msg.message,
@@ -103,17 +128,19 @@ wss.on("connection", async (ws) => {
         username: msg.username,
       });
 
+      // Prepare payload and log for debugging
+      const payload = {
+        type: "message",
+        username: newMessage.username,
+        message: newMessage.content,
+        timestamp: newMessage.timestamp.toISOString(),
+      };
+      console.log("Broadcasting message:", payload);
+
       // Trimite mesajul către toți clienții
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(
-            JSON.stringify({
-              type: "message",
-              username: newMessage.username,
-              message: newMessage.content,
-              timestamp: newMessage.timestamp,
-            })
-          );
+          client.send(JSON.stringify(payload));
         }
       });
     } catch (err) {

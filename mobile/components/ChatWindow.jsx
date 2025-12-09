@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, AsyncStorage } from "react-native";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import Avatar from "./Avatar";
@@ -7,8 +7,26 @@ import Avatar from "./Avatar";
 export default function ChatWindow({ username, onLogout }) {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [lastClearAt, setLastClearAt] = useState(new Date(0));
   const ws = useRef(null);
 
+  // Load lastClearAt from AsyncStorage on component mount
+  useEffect(() => {
+    const initializeLastClear = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("lastClearAt");
+        if (saved) {
+          setLastClearAt(new Date(saved));
+        }
+      } catch (err) {
+        console.error("Error loading lastClearAt:", err);
+      }
+    };
+
+    initializeLastClear();
+  }, []);
+
+  // WebSocket connection
   useEffect(() => {
     ws.current = new WebSocket("wss://sopm-25-chat.onrender.com");
 
@@ -16,9 +34,42 @@ export default function ChatWindow({ username, onLogout }) {
     ws.current.onclose = () => setIsConnected(false);
     ws.current.onerror = (err) => console.error("WebSocket error:", err);
 
-    ws.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setMessages((prev) => [...prev, data]);
+    ws.current.onmessage = async (event) => {
+      console.log("WebSocket raw data:", event.data, "(type:", typeof event.data, ")");
+
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch (err) {
+        console.error("Failed to JSON.parse WebSocket message:", err, "raw:", event.data);
+        return;
+      }
+      console.log("WebSocket message received:", data);
+
+      // Gestionare clear event
+      if (data && data.type === "clear") {
+        console.log("Clear event received. Timestamp:", data.timestamp);
+        const clearTime = new Date(data.timestamp);
+        console.log("clearTime Date object:", clearTime);
+        setLastClearAt(clearTime);
+        try {
+          await AsyncStorage.setItem("lastClearAt", clearTime.toISOString());
+          console.log("lastClearAt saved to AsyncStorage:", clearTime.toISOString());
+        } catch (err) {
+          console.error("Error saving lastClearAt:", err);
+        }
+        return;
+      }
+
+      // Mesaje normale - defensive timestamp
+      if (data) {
+        if (!data.timestamp) {
+          data.timestamp = new Date().toISOString();
+          console.warn("Incoming message missing timestamp — assigning now:", data.timestamp);
+        }
+        console.log("Adding message. Message timestamp:", data.timestamp);
+        setMessages((prev) => [...prev, data]);
+      }
     };
 
     return () => ws.current?.close();
@@ -47,6 +98,35 @@ export default function ChatWindow({ username, onLogout }) {
     ]);
   };
 
+  const clearChat = () => {
+    Alert.alert("Curăță chat", "Ștergi afișarea chat-ului? (mesajele rămân în baza de date)", [
+      { text: "Anulează", style: "cancel" },
+      {
+        text: "Curăță",
+        style: "destructive",
+        onPress: () => {
+          console.log("Sending clear event...");
+          ws.current?.send(
+            JSON.stringify({
+              username,
+              type: "clear",
+            })
+          );
+        },
+      },
+    ]);
+  };
+
+  // Filtrează mesajele să afișeze doar pe cele primite după clear
+  const visibleMessages = messages.filter((m) => {
+    if (m.type === "clear") return false;
+    if (!m.timestamp) return true;
+    const msgDate = new Date(m.timestamp);
+    const isVisible = msgDate >= lastClearAt;
+    console.log(`Filter check - Message: ${m.message || m.content}, timestamp: ${m.timestamp}, msgDate: ${msgDate}, lastClearAt: ${lastClearAt}, visible: ${isVisible}`);
+    return isVisible;
+  });
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -74,13 +154,16 @@ export default function ChatWindow({ username, onLogout }) {
           <View style={styles.usernameBadge}>
             <Text style={styles.usernameBadgeText}>{username}</Text>
           </View>
+          <TouchableOpacity style={styles.clearBtn} onPress={clearChat}>
+            <Text style={styles.clearText}>🗑️</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
             <Text style={styles.logoutText}>🚪</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <MessageList messages={messages} username={username} />
+      <MessageList messages={visibleMessages} username={username} />
       <MessageInput onSend={sendMessage} disabled={!isConnected} />
     </View>
   );
@@ -150,6 +233,17 @@ const styles = StyleSheet.create({
     color: "#3b82f6",
     fontSize: 12,
     fontWeight: "600",
+  },
+  clearBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fef3c7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearText: {
+    fontSize: 18,
   },
   logoutBtn: {
     width: 40,

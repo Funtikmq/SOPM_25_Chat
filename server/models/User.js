@@ -16,6 +16,10 @@ const userSchema = new mongoose.Schema({
   joinedAt: {
     type: Date,
     default: Date.now
+  },
+  lastClearAt: {
+    type: Date,
+    default: null
   }
 });
 
