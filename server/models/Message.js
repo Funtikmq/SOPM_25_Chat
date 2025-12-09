@@ -26,6 +26,18 @@ const messageSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  edited: {
+    type: Boolean,
+    default: false
+  },
+  editedAt: {
+    type: Date,
+    default: null
+  },
+  editedBy: {
+    type: String,
+    default: null
+  },
   timestamp: {
     type: Date,
     default: Date.now

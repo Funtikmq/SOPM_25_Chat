@@ -64,6 +64,21 @@ export default function ChatWindow({ username }) {
         return;
       }
 
+      // Gestionare edit event
+      if (data && data.type === "edit") {
+        console.log("Edit event received:", data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            const mid = m.id || m._id;
+            if (String(mid) === String(data.id)) {
+              return { ...m, message: data.message, edited: !!data.edited, editedBy: data.editedBy, editedAt: data.editedAt };
+            }
+            return m;
+          })
+        );
+        return;
+      }
+
       // Mesaje normale - defensive: ensure timestamp exists
       if (data) {
         if (!data.timestamp) {
@@ -90,6 +105,20 @@ export default function ChatWindow({ username }) {
   const deleteMessage = (id) => {
     if (!confirm("Sigur vrei să ștergi acest mesaj?")) return;
     ws.current?.send(JSON.stringify({ type: "delete", id, username }));
+  };
+
+  const editMessage = (id, currentText) => {
+    const newText = prompt("Editează mesajul:", currentText);
+    if (newText === null) return; // user cancelled
+    if (newText.trim() === "") {
+      alert("Mesajul nu poate fi gol");
+      return;
+    }
+    try {
+      ws.current?.send(JSON.stringify({ type: "edit", id, username, newText }));
+    } catch (err) {
+      console.error("Failed to send edit request:", err);
+    }
   };
 
   const logout = () => {
@@ -149,7 +178,7 @@ export default function ChatWindow({ username }) {
           </div>
         </header>
 
-        <MessageList messages={visibleMessages} username={username} onDelete={deleteMessage} />
+        <MessageList messages={visibleMessages} username={username} onDelete={deleteMessage} onEdit={editMessage} />
         <MessageInput onSend={sendMessage} disabled={!isConnected} />
       </div>
     </div>

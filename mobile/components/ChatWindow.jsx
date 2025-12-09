@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Modal, TextInput } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
@@ -9,6 +9,9 @@ export default function ChatWindow({ username, onLogout }) {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [lastClearAt, setLastClearAt] = useState(new Date(0));
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [editId, setEditId] = useState(null);
   const ws = useRef(null);
 
   // Load lastClearAt from AsyncStorage on component mount
@@ -77,6 +80,21 @@ export default function ChatWindow({ username, onLogout }) {
         return;
       }
 
+      // Handle edit event
+      if (data && data.type === "edit") {
+        console.log("Edit event received:", data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            const mid = m.id || m._id;
+            if (String(mid) === String(data.id)) {
+              return { ...m, message: data.message, edited: !!data.edited, editedBy: data.editedBy, editedAt: data.editedAt };
+            }
+            return m;
+          })
+        );
+        return;
+      }
+
       // Mesaje normale - defensive timestamp
       if (data) {
         if (!data.timestamp) {
@@ -135,6 +153,49 @@ export default function ChatWindow({ username, onLogout }) {
     ]);
   };
 
+  const deleteMessage = (id) => {
+    Alert.alert("Șterge mesaj", "Sigur vrei să ștergi acest mesaj pentru toată lumea?", [
+      { text: "Anulează", style: "cancel" },
+      {
+        text: "Șterge",
+        style: "destructive",
+        onPress: () => {
+          try {
+            console.log("Requesting delete for message id:", id);
+            ws.current?.send(
+              JSON.stringify({ type: "delete", id, username })
+            );
+          } catch (err) {
+            console.error("Failed to send delete request:", err);
+          }
+        },
+      },
+    ]);
+  };
+
+  const openEditModal = (id, currentText) => {
+    setEditId(id);
+    setEditText(currentText || "");
+    setEditModalVisible(true);
+  };
+
+  const submitEdit = () => {
+    if (!editId) return;
+    const newText = editText.trim();
+    if (newText === "") {
+      Alert.alert("Eroare", "Mesajul nu poate fi gol");
+      return;
+    }
+    try {
+      ws.current?.send(JSON.stringify({ type: "edit", id: editId, username, newText }));
+      setEditModalVisible(false);
+      setEditId(null);
+      setEditText("");
+    } catch (err) {
+      console.error("Failed to send edit request:", err);
+    }
+  };
+
   // Filtrează mesajele să afișeze doar pe cele primite după clear
   const visibleMessages = messages.filter((m) => {
     if (m.type === "clear") return false;
@@ -181,7 +242,28 @@ export default function ChatWindow({ username, onLogout }) {
         </View>
       </View>
 
-      <MessageList messages={visibleMessages} username={username} />
+      <MessageList messages={visibleMessages} username={username} onDelete={deleteMessage} onEdit={openEditModal} />
+      <Modal visible={editModalVisible} animationType="slide" transparent={true} onRequestClose={() => setEditModalVisible(false)}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" }}>
+          <View style={{ width: "90%", backgroundColor: "white", padding: 16, borderRadius: 8 }}>
+            <Text style={{ fontWeight: "600", marginBottom: 8 }}>Editează mesaj</Text>
+            <TextInput
+              value={editText}
+              onChangeText={setEditText}
+              multiline
+              style={{ minHeight: 80, borderColor: "#e5e7eb", borderWidth: 1, padding: 8, borderRadius: 6, marginBottom: 12 }}
+            />
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+                <Text style={{ color: "#6b7280" }}>Anulează</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={submitEdit} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+                <Text style={{ color: "#ef4444", fontWeight: "600" }}>Salvează</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <MessageInput onSend={sendMessage} disabled={!isConnected} />
     </View>
   );

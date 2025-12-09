@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import Avatar from "./Avatar";
 
-export default function MessageList({ messages, username, onDelete }) {
+export default function MessageList({ messages, username, onDelete, onEdit }) {
   const endRef = useRef();
 
   useEffect(() => {
@@ -54,22 +54,32 @@ export default function MessageList({ messages, username, onDelete }) {
                     })}
                   </div>
                 </div>
-                {msg.username === username && onDelete && (
-                  <button
-                    onClick={() => onDelete(msg.id || msg._id)}
-                    style={{
-                      position: "absolute",
-                      top: -8,
-                      right: -36,
-                      background: "transparent",
-                      border: "none",
-                      color: "#9ca3af",
-                      cursor: "pointer",
-                    }}
-                    title="Șterge mesaj"
-                  >
-                    ✖
-                  </button>
+                {msg.username === username && (
+                  <div style={{ position: "absolute", top: -8, right: -36, display: "flex", gap: 6 }}>
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(msg.id || msg._id, msg.message)}
+                        style={{ background: "transparent", border: "none", color: "#6b7280", cursor: "pointer" }}
+                        title="Editează mesaj"
+                      >
+                        ✎
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(msg.id || msg._id)}
+                        style={{ background: "transparent", border: "none", color: "#9ca3af", cursor: "pointer" }}
+                        title="Șterge mesaj"
+                      >
+                        ✖
+                      </button>
+                    )}
+                  </div>
+                )}
+                {msg.edited && (
+                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                    Edited{msg.editedBy ? ` by ${msg.editedBy}` : ""}{msg.editedAt ? ` at ${new Date(msg.editedAt).toLocaleTimeString()}` : ""}
+                  </div>
                 )}
               </div>
             </div>

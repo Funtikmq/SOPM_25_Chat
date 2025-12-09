@@ -81,6 +81,9 @@ wss.on("connection", async (ws) => {
         message: m.content,
         timestamp: m.timestamp,
         deleted: !!m.deleted,
+        edited: !!m.edited,
+        editedAt: m.editedAt ? m.editedAt.toISOString() : null,
+        editedBy: m.editedBy || null,
       })
     )
   );
@@ -146,6 +149,54 @@ wss.on("connection", async (ws) => {
         } catch (err) {
           console.error("Error handling delete:", err);
           ws.send(JSON.stringify({ type: "error", message: "Eroare stergere mesaj" }));
+        }
+        return;
+      }
+
+      // Handle edit request
+      if (msg.type === "edit") {
+        try {
+          const messageId = msg.id;
+          const newText = msg.newText;
+          if (!messageId || typeof newText !== "string") {
+            ws.send(JSON.stringify({ type: "error", message: "Missing id or newText for edit" }));
+            return;
+          }
+          const m = await Message.findById(messageId);
+          if (!m) {
+            ws.send(JSON.stringify({ type: "error", message: "Message not found" }));
+            return;
+          }
+          // Allow edit only by original author
+          if (m.username !== msg.username) {
+            ws.send(JSON.stringify({ type: "error", message: "Nu ai dreptul sa editezi acest mesaj" }));
+            return;
+          }
+
+          m.content = newText;
+          m.edited = true;
+          m.editedAt = new Date();
+          m.editedBy = msg.username;
+          await m.save();
+
+          // Broadcast edit event to all clients
+          const payload = {
+            type: "edit",
+            id: m._id,
+            message: m.content,
+            edited: true,
+            editedBy: m.editedBy,
+            editedAt: m.editedAt.toISOString(),
+          };
+          console.log("Broadcasting edit:", payload);
+          clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify(payload));
+            }
+          });
+        } catch (err) {
+          console.error("Error handling edit:", err);
+          ws.send(JSON.stringify({ type: "error", message: "Eroare editare mesaj" }));
         }
         return;
       }

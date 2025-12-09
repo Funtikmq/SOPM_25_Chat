@@ -1,8 +1,8 @@
 import React, { useRef, useEffect } from "react";
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Avatar from "./Avatar";
 
-export default function MessageList({ messages, username, onDelete }) {
+export default function MessageList({ messages, username, onDelete, onEdit }) {
   const scrollRef = useRef();
 
   useEffect(() => {
@@ -58,11 +58,25 @@ export default function MessageList({ messages, username, onDelete }) {
                     minute: "2-digit",
                   })}
                 </Text>
+                {msg.edited && (
+                  <Text style={styles.editedText}>
+                    Edited{msg.editedBy ? ` by ${msg.editedBy}` : ""}{msg.editedAt ? ` at ${new Date(msg.editedAt).toLocaleTimeString()}` : ""}
+                  </Text>
+                )}
               </View>
-              {msg.username === username && onDelete && (
-                <TouchableOpacity onPress={() => onDelete(msg.id || msg._id)} style={{marginLeft:8}}>
-                  <Text style={{color:'#9ca3af'}}>✖</Text>
-                </TouchableOpacity>
+              {msg.username === username && (
+                <View style={styles.controlsRow}>
+                  {onEdit && (
+                    <TouchableOpacity onPress={() => onEdit(msg.id || msg._id, msg.message)} style={styles.editButton}>
+                      <Text style={styles.editText}>✎</Text>
+                    </TouchableOpacity>
+                  )}
+                  {onDelete && (
+                    <TouchableOpacity onPress={() => onDelete(msg.id || msg._id)} style={styles.deleteButton}>
+                      <Text style={styles.deleteText}>✖</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               )}
             </View>
           )}
@@ -145,5 +159,40 @@ const styles = StyleSheet.create({
     fontSize: 10,
     opacity: 0.6,
     alignSelf: "flex-end",
+  },
+  editedText: {
+    fontSize: 10,
+    color: "#6b7280",
+    marginTop: 4,
+  },
+  deleteButton: {
+    marginLeft: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(156,163,175,0.08)",
+  },
+  deleteText: {
+    color: "#9ca3af",
+    fontSize: 14,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  editButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(107,114,128,0.06)",
+  },
+  editText: {
+    color: "#6b7280",
+    fontSize: 14,
   },
 });
